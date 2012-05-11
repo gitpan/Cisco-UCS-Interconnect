@@ -1,5 +1,8 @@
 Revision history for Cisco-UCS-Interconnect
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.1	Fri 11 May 2012 ltp@cpan.org
+        First release.
+
+0.12	Fri 11 May 2012 ltp@cpan.org
+	You shouldn't leave print statements in releases to CPAN.
 

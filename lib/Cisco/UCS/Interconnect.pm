@@ -12,7 +12,7 @@ use Carp qw(croak);
 
 our @ISA	= qw(Exporter Cisco::UCS);
 
-our $VERSION	= '0.1';
+our $VERSION	= '0.12';
 
 our @ATTRIBUTES	= qw(dn id model operability serial vendor);
 
@@ -57,13 +57,11 @@ sub fan {
 }
 
 sub get_fan {
-	print "In get_fan\n";
         my ($self, $id) = @_; 
         return ( $id ? $self->get_fans($id) : undef )
 }
 
 sub get_fans {
-	print "In get_fans\n";
         my ($self, $id)= @_; 
         return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentFan', class => 'Cisco::UCS::Common::Fan', attr => 'fan', self => $self)
 }
