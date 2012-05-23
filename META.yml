@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Cisco-UCS-Interconnect
-version:            0.12
+version:            0.13
 abstract:           Class for operations with a Cisco UCS Fabric Interconnect
 author:
     - Luke Poskitt <ltp@cpan.org>
@@ -11,7 +11,10 @@ configure_requires:
 build_requires:
     ExtUtils::MakeMaker:  0
 requires:
-    Test::More:  0
+    Cisco::UCS::Common::Fan:  0
+    Cisco::UCS::Common::PSU:  0
+    Cisco::UCS::Common::SwitchCard:  0
+    Test::More:           0
 no_index:
     directory:
         - t

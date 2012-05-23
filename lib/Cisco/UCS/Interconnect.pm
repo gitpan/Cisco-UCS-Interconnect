@@ -3,16 +3,13 @@ package Cisco::UCS::Interconnect;
 use warnings;
 use strict;
 
-use Cisco::UCS;
 use Cisco::UCS::Common::SwitchCard;
 use Cisco::UCS::Common::PSU;
 use Cisco::UCS::Common::Fan;
 use Scalar::Util qw(weaken);
 use Carp qw(croak);
 
-our @ISA	= qw(Exporter Cisco::UCS);
-
-our $VERSION	= '0.12';
+our $VERSION	= '0.13';
 
 our @ATTRIBUTES	= qw(dn id model operability serial vendor);
 
@@ -247,7 +244,7 @@ retrieved in a previous query if one is available.
 
 =head1 AUTHOR
 
-luke Poskitt, C<< <ltp at cpan.org> >>
+Luke Poskitt, C<< <ltp at cpan.org> >>
 
 =head1 BUGS
 
@@ -286,7 +283,7 @@ L<http://search.cpan.org/dist/Cisco-UCS-Interconnect/>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 luke Poskitt.
+Copyright 2012 Luke Poskitt.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
