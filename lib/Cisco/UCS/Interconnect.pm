@@ -9,7 +9,7 @@ use Cisco::UCS::Common::Fan;
 use Scalar::Util qw(weaken);
 use Carp qw(croak);
 
-our $VERSION	= '0.13';
+our $VERSION	= '0.14';
 
 our @ATTRIBUTES	= qw(dn id model operability serial vendor);
 
@@ -75,7 +75,7 @@ sub get_psu {
 
 sub get_psus {
         my ($self, $id)= @_; 
-        return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentpsu', class => 'Cisco::UCS::Common::PSU', attr => 'psu', self => $self)
+        return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentPsu', class => 'Cisco::UCS::Common::PSU', attr => 'psu', self => $self)
 }
 
 {
