@@ -9,7 +9,7 @@ use Cisco::UCS::Common::Fan;
 use Scalar::Util qw(weaken);
 use Carp qw(croak);
 
-our $VERSION	= '0.14';
+our $VERSION	= '0.15';
 
 our @ATTRIBUTES	= qw(dn id model operability serial vendor);
 
@@ -20,80 +20,52 @@ our %ATTRIBUTES = (
 			mgmt_net	=> 'oobIfMask',
 		);
 
+my %MMAP	= (	
+			card	=> {
+					type	=> 'equipmentSwitchCard',
+					class	=> 'Cisco::UCS::Common::SwitchCard', 
+				   },
+			fan	=> {
+					type	=> 'equipmentFan',
+					class	=> 'Cisco::UCS::Common::Fan'
+				   },
+			fanmodule=> {
+					type	=> 'equipmentFanModule',
+					class	=> 'Cisco::UCS::Common::Fan'
+				   },
+			psu	=> {
+					type	=> 'equipmentPsu',
+					class	=> 'Cisco::UCS::Common::PSU'
+				   }
+		);
+
 sub new {
-	my ($class, %args) = @_;
+	my ( $class, %args ) = @_;
 	my $self = {};
 	bless $self, $class;
-	defined $args{dn}	? $self->{dn}	= $args{dn}		: croak 'dn not defined';
-	defined $args{ucs} 	? weaken($self->{ucs} = $args{ucs})	: croak 'ucs not defined';
+	defined $args{dn}	? $self->{dn}		= $args{dn}	: croak 'dn not defined';
+	defined $args{ucs} 	? weaken($self->{ucs} 	= $args{ucs})	: croak 'ucs not defined';
 	my %attr = %{$self->{ucs}->resolve_dn(dn => $self->{dn})->{outConfig}->{networkElement}};
 
-	while (my ($k, $v) = each %attr) { $self->{$k} = $v }
+	while (my( $k, $v ) = each %attr) { $self->{$k} = $v }
 
         return $self;
-}
-
-sub card {
-	my ($self, $id) = @_;
-	return ( defined $self->{card}->{$id} ? $self->{card}->{$id} : $self->get_card($id) )
-}
-
-sub get_card {
-	my ($self, $id) = @_;
-	return ( $id ? $self->get_cards($id) : undef )
-}
-
-sub get_cards {
-	my ($self, $id) = @_;
-	return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentSwitchCard', class => 'Cisco::UCS::Common::SwitchCard', attr => 'card', self => $self)
-}
-
-sub fan {
-        my ($self, $id) = @_; 
-        return ( defined $self->{fan}->{$id} ? $self->{fan}->{$id} : $self->get_fan($id) )   
-}
-
-sub get_fan {
-        my ($self, $id) = @_; 
-        return ( $id ? $self->get_fans($id) : undef )
-}
-
-sub get_fans {
-        my ($self, $id)= @_; 
-        return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentFan', class => 'Cisco::UCS::Common::Fan', attr => 'fan', self => $self)
-}
-
-sub psu {
-        my ($self, $id) = @_; 
-        return ( defined $self->{psu}->{$id} ? $self->{psu}->{$id} : $self->get_psu($id) )   
-}
-
-sub get_psu {
-        my ($self, $id) = @_; 
-        return ( $id ? $self->get_psus($id) : undef )
-}
-
-sub get_psus {
-        my ($self, $id)= @_; 
-        return $self->{ucs}->_get_child_objects(id => $id, type => 'equipmentPsu', class => 'Cisco::UCS::Common::PSU', attr => 'psu', self => $self)
 }
 
 {
 	no strict 'refs';
 
-	while ( my ($pseudo, $attribute) = each %ATTRIBUTES ) {
-		*{ __PACKAGE__ . '::' . $pseudo } = sub {
-			my $self = shift;
-			return $self->{$attribute}
-		}
-	}
+	while ( my ($pseudo, $attribute) = each %ATTRIBUTES ) { *{ __PACKAGE__ .'::'. $pseudo } = sub { return $_[0]->{$attribute} } }
 
-        foreach my $attribute (@ATTRIBUTES) {
-                *{ __PACKAGE__ . '::' . $attribute } = sub {
-                        my $self = shift;
-                        return $self->{$attribute}
-                }
-        }
+        foreach my $attribute (@ATTRIBUTES) { *{ __PACKAGE__ .'::'. $attribute } = sub { return $_[0]->{$attribute} } }
+
+	foreach my $m ( keys %MMAP ) {
+		my $gm 	= "get_$m";	# i.e. get_object
+		my $gms	= "get_$m".'s'; # i.e. get_objects
+		*{ __PACKAGE__ .'::'. $m	} = sub { my ($self, $id) = @_; return ( defined $self->{$m}->{$id} ? $self->{$m}->{$id} : $self->$gm($id) ) };
+		*{ __PACKAGE__ .'::'. $gm 	} = sub { my ($self, $id) = @_; return ( $id ? $self->$gms($id) : undef ) };
+		*{ __PACKAGE__ .'::'. $gms	} = sub { my ($self, $id) = @_; return $self->{ucs}->_get_child_objects(id => $id, type => $MMAP{$m}{type}, class => $MMAP{$m}{class}, attr => $m, self => $self) };
+	}
 }
 
 =head1 NAME
@@ -175,6 +147,24 @@ Returns the configured management interface netmask.
 Returns an array of Cisco::UCS::Common::Fan objects representing the fans installed in
 the fabric interconnect.
 
+B<PLEASE NOTE>
+
+Fan objects for Interconnects in the Cisco UCSM management information heirarchy changed 
+from using the object identifier/description 'equipmentFan' to 'equipmentFanModule' somewhere
+between versions 2.0(1w) and 2.0(4a).  Consequently if you find that the B<fan> methods do not
+work or return no output for your installation, then please use the comparitive B<fanmodule>
+methods instead.
+
+=head2 get_fans
+                
+        my @fans = $ucs->interconnect(A)->get_fans;
+        foreach my $fan (@fans) {
+                print "Fan " . $fan->id . " thermal : " . $fan->thermal . "\n";
+        }
+        
+Returns an array of Cisco::UCS::Common::Fan objects representing the fans installed in
+the fabric interconnect.
+
 =head2 get_fan ( $id )
 
 	print "Fan 1 operability: " . $ucs->interconnect(A)->fan(1)->operability . "\n";       
@@ -189,6 +179,43 @@ method.
 Returns a Cisco::UCS::Common::Fan object corresponding to the fans specified by the numerical
 identifier.  Note that this is a caching method and when invoked will return an object retrieved
 in a previous query if one is available.
+
+=head2 get_fanmodules ( $id )
+        
+Returns an array of Cisco::UCS::Common::Fan objects representing the fans installed in
+the fabric interconnect.
+
+B<PLEASE NOTE> : This method behaves identically to the aforementioned B<get_fans> method but due
+to USCM object naming changes between later versions, this method is to be used as an alternative
+to the B<get_fans> method only when the B<get_fans> method fails to work.
+
+=head2 get_fanmodule ( $id )
+
+Returns a Cisco::UCS::Common::Fan object corresponding to the fans specified by the numerical
+identifier. 
+
+B<PLEASE NOTE> : This method behaves identically to the aforementioned B<get_fan> method but due to 
+USCM object naming changes between later versions, this method is to be used as an alternative to
+the B<get_fan> method only when the B<get_fan> method fails to work.
+
+=head2 fanmodule ( $id )
+        
+Returns a Cisco::UCS::Common::Fan object corresponding to the fans specified by the numerical
+identifier. 
+
+B<PLEASE NOTE> : This method behaves identically to the aforementioned B<fan> method but due to 
+USCM object naming changes between later versions, this method is to be used as an alternative
+to the B<fan> method only when the B<fan> method fails to work.
+
+=head2 get_psus
+                
+        my @psus = $ucs->interconnect(A)->get_psus;
+        foreach my $psu (@psus) {
+                print "PSU " . $psu->id . " thermal : " . $psu->thermal . "\n";
+        }
+        
+Returns an array of Cisco::UCS::Common::PSU objects representing the PSUs installed in
+the fabric interconnect.
 
 =head2 get_psus
                 
