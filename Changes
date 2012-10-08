@@ -1,8 +1,11 @@
 Revision history for Cisco-UCS-Interconnect
 
-0.1	Fri 11 May 2012 ltp@cpan.org
-        First release.
+0.16	Fri 11 May 2012 ltp@cpan.org
+	Update to fix naming change of equipmentFan to equipmentFanModule in latter versions of UCSM.
 
 0.12	Fri 11 May 2012 ltp@cpan.org
 	You shouldn't leave print statements in releases to CPAN.
+
+0.1	Fri 11 May 2012 ltp@cpan.org
+        First release.
 

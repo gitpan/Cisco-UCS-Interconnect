@@ -9,7 +9,7 @@ use Cisco::UCS::Common::Fan;
 use Scalar::Util qw(weaken);
 use Carp qw(croak);
 
-our $VERSION	= '0.15';
+our $VERSION	= '0.16';
 
 our @ATTRIBUTES	= qw(dn id model operability serial vendor);
 
@@ -29,10 +29,6 @@ my %MMAP	= (
 					type	=> 'equipmentFan',
 					class	=> 'Cisco::UCS::Common::Fan'
 				   },
-			fanmodule=> {
-					type	=> 'equipmentFanModule',
-					class	=> 'Cisco::UCS::Common::Fan'
-				   },
 			psu	=> {
 					type	=> 'equipmentPsu',
 					class	=> 'Cisco::UCS::Common::PSU'
@@ -44,10 +40,13 @@ sub new {
 	my $self = {};
 	bless $self, $class;
 	defined $args{dn}	? $self->{dn}		= $args{dn}	: croak 'dn not defined';
-	defined $args{ucs} 	? weaken($self->{ucs} 	= $args{ucs})	: croak 'ucs not defined';
-	my %attr = %{$self->{ucs}->resolve_dn(dn => $self->{dn})->{outConfig}->{networkElement}};
+	defined $args{ucs} 	? weaken( $self->{ucs} 	= $args{ucs} )	: croak 'ucs not defined';
+	my %attr = %{ $self->{ucs}->resolve_dn( dn => $self->{dn} )->{outConfig}->{networkElement} };
 
 	while (my( $k, $v ) = each %attr) { $self->{$k} = $v }
+
+	my ($v) = $self->{ucs}->version =~ /\((.*)\)/;
+	$MMAP{fan}{type} = 'equipmentFanModule' if( $v =~ /^4/);
 
         return $self;
 }
@@ -55,16 +54,16 @@ sub new {
 {
 	no strict 'refs';
 
-	while ( my ($pseudo, $attribute) = each %ATTRIBUTES ) { *{ __PACKAGE__ .'::'. $pseudo } = sub { return $_[0]->{$attribute} } }
+	while ( my( $pseudo, $attribute ) = each %ATTRIBUTES ) { *{ __PACKAGE__ .'::'. $pseudo } = sub { return $_[0]->{$attribute} } }
 
-        foreach my $attribute (@ATTRIBUTES) { *{ __PACKAGE__ .'::'. $attribute } = sub { return $_[0]->{$attribute} } }
+        foreach my $attribute ( @ATTRIBUTES ) { *{ __PACKAGE__ .'::'. $attribute } = sub { return $_[0]->{$attribute} } }
 
-	foreach my $m ( keys %MMAP ) {
+	foreach my $m ( keys %MMAP ) {  # i.e. object
 		my $gm 	= "get_$m";	# i.e. get_object
 		my $gms	= "get_$m".'s'; # i.e. get_objects
-		*{ __PACKAGE__ .'::'. $m	} = sub { my ($self, $id) = @_; return ( defined $self->{$m}->{$id} ? $self->{$m}->{$id} : $self->$gm($id) ) };
-		*{ __PACKAGE__ .'::'. $gm 	} = sub { my ($self, $id) = @_; return ( $id ? $self->$gms($id) : undef ) };
-		*{ __PACKAGE__ .'::'. $gms	} = sub { my ($self, $id) = @_; return $self->{ucs}->_get_child_objects(id => $id, type => $MMAP{$m}{type}, class => $MMAP{$m}{class}, attr => $m, self => $self) };
+		*{ __PACKAGE__ .'::'. $m	} = sub { my( $self, $id ) = @_; return ( defined $self->{$m}->{$id} ? $self->{$m}->{$id} : $self->$gm( $id ) ) };
+		*{ __PACKAGE__ .'::'. $gm 	} = sub { my( $self, $id ) = @_; return ( $id ? $self->$gms( $id ) : undef ) };
+		*{ __PACKAGE__ .'::'. $gms	} = sub { my( $self, $id ) = @_; return $self->{ucs}->_get_child_objects( id => $id, type => $MMAP{$m}{type}, class => $MMAP{$m}{class}, attr => $m, self => $self ) };
 	}
 }
 
